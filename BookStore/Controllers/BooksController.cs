@@ -51,7 +51,8 @@ public class BooksController : ControllerBase
         IEnumerable<Book> books = _bookRepository.Where(book => (
             !searchGenres.Any() // If search term is empty we don't filter for it.
             || (book.GenreIds ?? new()) // To avoid null reference exceptions we create a new empty list
-                .Any(genreId => genresFound.Any(g => g.id == genreId))) && !searchAuthors.Any());
+                .Any(genreId => genresFound.Any(g => g.id == genreId)))
+                && !searchAuthors.Any()); // TODO(PETER): Do author search
 
         return books.Select(book => new BookDto
         {
