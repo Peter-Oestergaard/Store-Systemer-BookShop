@@ -1,30 +1,65 @@
-using System.Collections;
+using BookStore.DTOs;
+using BookStore.Interfaces;
+using BookStore.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BookStore.Controllers;
 
+/// <summary>
+/// 
+/// </summary>
 [ApiController]
 [Route("[controller]")]
 [Produces("application/json")]
 public class BooksController : ControllerBase
 {
     private readonly ILogger<BooksController> _logger;
+    private readonly IRepository<Book> _bookRepository;
+    private readonly IRepository<Genre> _genreRepository;
 
-    public BooksController(ILogger<BooksController> logger)
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="logger"></param>
+    /// <param name="bookRepository"></param>
+    /// <param name="genreRepository"></param>
+    public BooksController(ILogger<BooksController> logger, IRepository<Book> bookRepository, IRepository<Genre> genreRepository)
     {
         _logger = logger;
+        _bookRepository = bookRepository;
+        _genreRepository = genreRepository;
     }
 
     /// <summary>
     /// Give me all them books
     /// </summary>
-    /// <param name="genres"></param>
-    /// <param name="authors"></param>
+    /// <param name="genres">Comma separated list of genres. E.g. "Scifi,romance,noir"</param>
+    /// <param name="authors">Comma separated list of authors. E.g. "King,Coonz,Reuter"</param>
     /// <returns>All them books</returns>
     [HttpGet(Name = "Books")]
-    public IEnumerable<Book> GetBook(string? genres, string? authors)
+    public IEnumerable<BookDto> GetBooks(string? genres, string? authors)
     {
-        return new List<Book> { new() {Id = 1}};
+        List<string> searchGenres = genres?.Split(',').ToList() ?? new();
+        List<string> searchAuthors = authors?.Split(',').ToList() ?? new();
+
+        IEnumerable<Genre> genresFound = _genreRepository.Where(
+            g => 
+            searchGenres.Contains(g.Name)
+            );
+
+        //return _bookRepository.Where(book => (!ge.Any() || (book.Genres ?? new()).Any(bg => ge.Contains(bg.Name))) && (!au.Any() || (book.Authors ?? new()).Any(ba => au.Contains(ba.Name))));
+        IEnumerable<Book> books = _bookRepository.Where(book => (
+            !searchGenres.Any() // If search term is empty we don't filter for it.
+            || (book.GenreIds ?? new()) // To avoid null reference exceptions we create a new empty list
+                .Any(genreId => genresFound.Any(g => g.id == genreId))) && !searchAuthors.Any());
+
+        return books.Select(book => new BookDto
+        {
+            Id = book.Id,
+            Title = book.Title,
+            Genres = book.GenreIds?.Select(g => new Genre(g, _genreRepository.FirstOrDefault(fg => fg.id == g)?.Name!)).ToList()
+        }).ToList();
+        //return new List<BookDto>() { new BookDto() { Id = 1, Title = "Mis", Genres = null } };
     }
     
     /// <summary>
@@ -38,7 +73,7 @@ public class BooksController : ControllerBase
     public IActionResult GetBook(int id)
     {
         if (id == 0) return NotFound();
-        return Ok(new Book {Id = id});
+        return Ok(new Book(id, "Title{id}") );
     }
     
     /// <summary>
@@ -49,6 +84,6 @@ public class BooksController : ControllerBase
     [HttpGet("{id}/reviews")]
     public IEnumerable<Review> GetBookReviews(int id)
     {
-        return new List<Review> { new() {Id = 1+id}, new() {Id = 2+id}};
+        return new List<Review> { new(1+id), new(2+id)};
     }
 }

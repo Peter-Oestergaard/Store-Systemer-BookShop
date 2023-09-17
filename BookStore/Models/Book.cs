@@ -1,6 +1,17 @@
-﻿namespace BookStore.Controllers;
+﻿namespace BookStore.Models;
 
-public class Book
+/// <summary>
+/// 
+/// </summary>
+public record Book(int Id, string Title)
 {
-    public int Id { get; set; }
+    /// <summary>
+    /// 
+    /// </summary>
+    public List<int>? GenreIds { get; internal set; }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public List<int>? Authors { get; internal set; }
 }
