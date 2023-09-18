@@ -38,7 +38,6 @@ public class BooksController : ControllerBase
     /// <returns>All them books</returns>
     [HttpGet(Name = "Books")]
     [ProducesResponseType(typeof(IEnumerable<BookDto>), 200)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public IActionResult GetBooks(string? genres, string? authors)
     {
         List<string> searchGenres = genres?.Split(',').ToList() ?? new();
@@ -55,11 +54,6 @@ public class BooksController : ControllerBase
             || (book.GenreIds ?? new()) // To avoid null reference exceptions we create a new empty list
                 .Any(genreId => genresFound.Any(g => g.id == genreId)))
                 && !searchAuthors.Any()); // TODO(PETER): Do author search
-
-        if (!books.Any())
-        {
-            return NotFound();
-        };
 
         return Ok(books.Select(book => new BookDto
         {
@@ -90,20 +84,37 @@ public class BooksController : ControllerBase
     /// <param name="id"></param>
     /// <returns>Reviews for just that book</returns>
     [HttpGet("{id}/reviews")]
-    public IEnumerable<Review> GetBookReviews(int id)
+    [ProducesResponseType(typeof(List<Review>), 200)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult GetBookReviews(int id)
     {
-        return new List<Review> { new(1+id), new(2+id)};
+        return Ok(new List<Review> { new(1+id), new(2+id)});
     }
 
     /// <summary>
     /// Give me this review for this book
     /// </summary>
     /// <param name="bookId">Unique id of book to get review from</param>
-    /// /// <param name="reviewId">Unique id of review to get - (If reviews have unique ids why do we need to state the book id?)</param>
+    /// <param name="reviewId">Unique id of review to get - (If reviews have unique ids why do we need to state the book id?)</param>
     /// <returns>A review for a single book</returns>
     [HttpGet("{bookId}/reviews/{reviewId}")]
-    public Review GetBookReview(int bookId, int reviewId)
+    [ProducesResponseType(typeof(Review), 200)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult GetBookReview(int bookId, int reviewId)
     {
-        return new Review(bookId + reviewId);
+        return Ok(new Review(bookId + reviewId));
+    }
+
+    /// <summary>
+    /// Free-form text search
+    /// </summary>
+    /// <param name="query">The terms or phrase to search for</param>
+    /// <returns>Zero or more books that matches the search query</returns>
+    [HttpGet("search")]
+    [ProducesResponseType(typeof(IEnumerable<BookDto>), 200)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public IActionResult GetBooksBySearch(string query)
+    {
+        return Ok(new List<BookDto>() { new BookDto { Id = 0, Title = query.ToUpper() } });
     }
 }
