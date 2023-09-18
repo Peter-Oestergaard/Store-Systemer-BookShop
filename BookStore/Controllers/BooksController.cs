@@ -37,7 +37,9 @@ public class BooksController : ControllerBase
     /// <param name="authors">Comma separated list of authors. E.g. "King,Coonz,Reuter"</param>
     /// <returns>All them books</returns>
     [HttpGet(Name = "Books")]
-    public IEnumerable<BookDto> GetBooks(string? genres, string? authors)
+    [ProducesResponseType(typeof(IEnumerable<BookDto>), 200)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult GetBooks(string? genres, string? authors)
     {
         List<string> searchGenres = genres?.Split(',').ToList() ?? new();
         List<string> searchAuthors = authors?.Split(',').ToList() ?? new();
@@ -54,12 +56,17 @@ public class BooksController : ControllerBase
                 .Any(genreId => genresFound.Any(g => g.id == genreId)))
                 && !searchAuthors.Any()); // TODO(PETER): Do author search
 
-        return books.Select(book => new BookDto
+        if (!books.Any())
+        {
+            return NotFound();
+        };
+
+        return Ok(books.Select(book => new BookDto
         {
             Id = book.Id,
             Title = book.Title,
             Genres = book.GenreIds?.Select(g => new Genre(g, _genreRepository.FirstOrDefault(fg => fg.id == g)?.Name!)).ToList()
-        }).ToList();
+        }).ToList());
         //return new List<BookDto>() { new BookDto() { Id = 1, Title = "Mis", Genres = null } };
     }
     
@@ -86,5 +93,17 @@ public class BooksController : ControllerBase
     public IEnumerable<Review> GetBookReviews(int id)
     {
         return new List<Review> { new(1+id), new(2+id)};
+    }
+
+    /// <summary>
+    /// Give me this review for this book
+    /// </summary>
+    /// <param name="bookId">Unique id of book to get review from</param>
+    /// /// <param name="reviewId">Unique id of review to get - (If reviews have unique ids why do we need to state the book id?)</param>
+    /// <returns>A review for a single book</returns>
+    [HttpGet("{bookId}/reviews/{reviewId}")]
+    public Review GetBookReview(int bookId, int reviewId)
+    {
+        return new Review(bookId + reviewId);
     }
 }
